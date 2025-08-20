@@ -24,10 +24,10 @@ export default defineConfig({
         '@vueuse/core',
         'vue-i18n',
         { 'vue-sonner': ['toast'] },
-        { '@/composables/confirm.ts': ['useConfirm'] },
+        { '@/shared/composables/confirm.ts': ['useConfirm'] },
       ],
       dts: 'src/auto-imports.d.ts',
-      dirs: ['src/composables', 'src/stores'],
+      dirs: ['src/shared/composables', 'src/shared/stores'],
       vueTemplate: true, // Enable auto-import in Vue template
       eslintrc: {
         enabled: true,
@@ -35,7 +35,7 @@ export default defineConfig({
     }),
     // Auto register components
     Components({
-      dirs: ['src/components'],
+      dirs: ['src/components', 'src/shared/components', 'src/core/layout'],
       dts: 'src/components.d.ts',
     }),
     // Icons support

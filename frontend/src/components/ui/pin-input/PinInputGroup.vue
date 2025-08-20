@@ -2,7 +2,7 @@
 import type { HTMLAttributes } from 'vue'
 import { reactiveOmit } from '@vueuse/core'
 import { Primitive, type PrimitiveProps, useForwardProps } from 'reka-ui'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils/utils'
 
 const props = defineProps<PrimitiveProps & { class?: HTMLAttributes['class'] }>()
 const delegatedProps = reactiveOmit(props, 'class')

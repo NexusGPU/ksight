@@ -3,7 +3,7 @@ import type { HTMLAttributes } from 'vue'
 import { reactiveOmit } from '@vueuse/core'
 import { MoreHorizontal } from 'lucide-vue-next'
 import { PaginationEllipsis, type PaginationEllipsisProps } from 'reka-ui'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils/utils'
 
 const props = defineProps<PaginationEllipsisProps & { class?: HTMLAttributes['class'] }>()
 

@@ -7,7 +7,7 @@ import {
   type NavigationMenuLinkProps,
   useForwardPropsEmits,
 } from 'reka-ui'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils/utils'
 
 const props = defineProps<NavigationMenuLinkProps & { class?: HTMLAttributes['class'] }>()
 const emits = defineEmits<NavigationMenuLinkEmits>()

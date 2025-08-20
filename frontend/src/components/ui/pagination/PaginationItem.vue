@@ -2,7 +2,7 @@
 import type { HTMLAttributes } from 'vue'
 import { reactiveOmit } from '@vueuse/core'
 import { PaginationListItem, type PaginationListItemProps } from 'reka-ui'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils/utils'
 import { buttonVariants, type ButtonVariants } from '@/components/ui/button'
 
 const props = withDefaults(defineProps<PaginationListItemProps & {

@@ -7,7 +7,7 @@ import {
   MenubarPortal,
   useForwardProps,
 } from 'reka-ui'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils/utils'
 
 const props = withDefaults(
   defineProps<MenubarContentProps & { class?: HTMLAttributes['class'] }>(),

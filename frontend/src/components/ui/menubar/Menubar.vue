@@ -7,7 +7,7 @@ import {
   type MenubarRootProps,
   useForwardPropsEmits,
 } from 'reka-ui'
-import { cn } from '@/lib/utils'
+import { cn } from '@/shared/utils/utils'
 
 const props = defineProps<MenubarRootProps & { class?: HTMLAttributes['class'] }>()
 const emits = defineEmits<MenubarRootEmits>()
