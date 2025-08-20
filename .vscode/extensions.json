@@ -1,0 +1,12 @@
+{
+    "recommendations": [
+      "antfu.iconify",
+      "bradlc.vscode-tailwindcss",
+      "dbaeumer.vscode-eslint",
+      "vue.volar",
+      "mtxr.sqltools",
+      "mtxr.sqltools-driver-pg",
+      "oven.bun-vscode"
+    ]
+  }
+  

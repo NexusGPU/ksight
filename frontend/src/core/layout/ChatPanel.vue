@@ -12,7 +12,7 @@
     <div class="flex-1 p-3">
       <p class="text-sm text-muted-foreground">
         AI chat functionality will be implemented here.
-        Use k.workflow('name').run() and other K8s operations.
+        Use k.operation('name').run() and other K8s operations.
       </p>
     </div>
   </div>

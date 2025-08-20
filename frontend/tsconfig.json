@@ -35,7 +35,8 @@
       "@/components/*": ["./src/components/*"],
       "@/shared/*": ["./src/shared/*"],
       "@/core/*": ["./src/core/*"],
-      "@/plugins/*": ["./src/plugins/*"]
+      "@/plugins/*": ["./src/plugins/*"],
+      "~/*": ["../wailsjs/runtime/*"]
     },
     
     // Vue specific

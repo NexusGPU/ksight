@@ -111,8 +111,8 @@ export interface KubernetesSDK {
     contexts: ContextAPI
   }
   
-  // Workflows
-  workflow(name: string): WorkflowAPI
+  // Operations
+  operation(name: string): OperationAPI
   
   // Utilities
   util: {
@@ -234,11 +234,11 @@ export interface KubeContext {
   namespace?: string
 }
 
-export interface WorkflowAPI {
-  run(params?: Record<string, any>): Promise<WorkflowResult>
+export interface OperationAPI {
+  run(params?: Record<string, any>): Promise<OperationResult>
 }
 
-export interface WorkflowResult {
+export interface OperationResult {
   success: boolean
   output: any
   error?: string

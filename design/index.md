@@ -7,9 +7,9 @@ KSight is a user-centered Kubernetes GUI tool, focus on real-world operations ra
 Top: Tabs of Active/Pinned Cluster Connections, Add button to trigger connect cluster from existing KubeConfig or Load From Plaintext KubeConfig / New KubeConfig File (note all saved KubeConfig files should be watched, and ~/.kube Folder is default watched), Think Chrome Tabs, the right side is settings gear to open settings page, design it like VSCode, also extensible for different plugins, each has one namespace
 
 Left Sidebar(icon, narrow, like VSCode icon button at left)
-- Vertical Icon Menus: Applications, Operations, Nodes, Resources, Templates, Workflows and more extensions (default to open workloads, remember last active menu and menu order in local storage, order could be drag-n-drop adjustable)
+- Vertical Icon Menus: Applications, Operations, Nodes, Resources, Templates, Boards and more extensions (default to open workloads, remember last active menu and menu order in local storage, order could be drag-n-drop adjustable)
 - Main Area, varies for each menu
-- Right: AI Chatbox and chat histories, it can call K SDK and workflows like k.workflow('a').run(dynamic params)
+- Right: AI Chatbox and chat histories, it can call K SDK and Operations like k.operation('a').run(dynamic params)
 
 On Most Pages' Main Area:
 - Heading Line1: All opened views, if no saved active view, show default view with last filter/group/orders, each View could be closed, and plus button after all opened views, when click it, show dropdown of all saved views with filter, open from Saved Views or create new default view. (Views are are stored global scope, each View includes Filter and GroupBy and OrderBy, has some metadata, include which menu it belongs to, isPinned, isShared[gen shortlink for shared filter to send to any body] when switch between filters, criteria are replaced with current page);
@@ -80,12 +80,6 @@ Pod Detail:
 
 workload view，show pod，linked resource and node view，group to owner，kind， log，exec，attach，events，metrics （versions and img versions，one click update version to owner workload） reverse find service and one click forward，ephemeral debug container（showhide daemonsets）
 
-## Operations
-
-Heading: Opened Operation View, Add/Duplicate view.
-
-Fully customizable dashboard, user can build any View with Add Panel, Add Group, each Panel can be a Resource List View, Resource Detail View, Node/Pod Metrics View, or a Web URL, or an Ad-hoc Terminal, or a Topology Tree View, or a Pod Shell with Pre-defined Commands(prompt user to click run or run with params or not run when open this view), or a Pod Logs, or a Github/Ksight Workflow Trigger, or a Resource Status View, or a Events View.
-
 ## Nodes
 
 Registered Filters:
@@ -135,20 +129,27 @@ Right TableList:
 Left Sidebar: File tree structure, manage any templates, pattern search input on top, versioned using local git. 3 parts: pinned templates, my templates, shared templates (from links)
 Right: when click and template, show overview info on top, name, description etc., include template params(name, type, default val), actions like share|save|delete|duplicate, and monaco editor for main area, use `~{}` for template params
 
-## Workflows
+## Operations
 
-Layout similar to Templates, but each workflow click is to show overview and run history, when click edit, show monaco editor of typescript, and run button.
+Layout similar to Templates, but each operation click is to show overview and run history, when click edit, show monaco editor of typescript, and run button.
 Actions: Run(with params, default to current active cluster), Run in multiple clusters, need double confirm
 
-Saved Workflows (Belongs to Operation Menu, each Workflow is a typescript running on frontend);
+Saved Operations (Belongs to Operation Menu, each Operation is a typescript running on frontend);
 
-Workflow ship with built-in troubleshooting ways:
+Operations ship with built-in troubleshooting ways:
 - General Linux tools: bpftrace strace ，dump mem/stacktrace
 - Language specific tools: go pprof, java arthas etc., c++ gdb
-- Http/grpc/websocket tracing and debug workflow etc.
+- Http/grpc/websocket tracing and debug operation etc.
 - K8S operation flows: batch delete res, remove owner ref
 
 Run history and output are saved in local file system
+
+
+## Boards
+
+Heading: Opened Custom Boards, Add/Duplicate view.
+
+Fully customizable dashboard, user can build any View with Add Panel, Add Group, each Panel can be a Resource List View, Resource Detail View, Node/Pod Metrics View, or a Web URL, or an Ad-hoc Terminal, or a Topology Tree View, or a Pod Shell with Pre-defined Commands(prompt user to click run or run with params or not run when open this view), or a Pod Logs, or a Github/Ksight Operation Trigger, or a Resource Status View, or a Events View.
 
 ## Security
 
@@ -184,13 +185,14 @@ debug network policy，net topology, network tracing flows and commands etc.
 
 - Use Golang Dynamic Informers to watch needed resources, and use Wails Framework for EventsOn/EventsOff to sync to JS side
 - Keep Shadcn-Vue / Pinia / TailwindCSS stack, when you need new common component, Ask me first to offer a draft, if i say continue, you define the component directly
-- All TS functions wrapped in window.k as SDK, considering type inference and strong typing. all data from frontend memory maintained by events, and it can also be used in workflow, like await k.pods.list({ labelSelector: 'app=nginx' }).first().exec({ command: ['sh', '-c', 'echo hello'] }); await k.resource("apiVersionAndGroup", "SomeCR").get("namespace", "name").util(k.conditionReady or custom predicate); k.update(() => {k.deployment.get("namespace", "name");return updatedDeployment}, maxRetryOnConflictOption); k.patch(jsonPatch); k.createOrUpdate((obj) => { obj.isEmpty() return new Obj; else assigned fields return updatedObj}, maxRetryOnConflictOption); wrap errors, allow err.isNotFound(), err.isConflict(), err.isRateLimited() etc., and err.statusCode, err.message for raw error.
+- All TS functions wrapped in window.k as SDK, considering type inference and strong typing. all data from frontend memory maintained by events, and it can also be used in operations, like await k.pods.list({ labelSelector: 'app=nginx' }).first().exec({ command: ['sh', '-c', 'echo hello'] }); await k.resource("apiVersionAndGroup", "SomeCR").get("namespace", "name").util(k.conditionReady or custom predicate); k.update(() => {k.deployment.get("namespace", "name");return updatedDeployment}, maxRetryOnConflictOption); k.patch(jsonPatch); k.createOrUpdate((obj) => { obj.isEmpty() return new Obj; else assigned fields return updatedObj}, maxRetryOnConflictOption); wrap errors, allow err.isNotFound(), err.isConflict(), err.isRateLimited() etc., and err.statusCode, err.message for raw error.
 - Be careful of K8S cache mechanism, think utilize stored resourceVersion and local file storage to speed up first init and avoid loading too much data and make pressure on etcd, think best and concise way of modify informer lastVersion, don't trigger full sync when this process restarts, load from local files as much as possible, and keep cache strong consistency
-- Use log file to store all sdk mutations and get/list/watch request metadata for verbose log and debug, each log has unique id(workflow execution ID, or default UUID when each time this process starts), and store all workflow execution history, can link to all SDK run log, and link to workflow info
+- Use log file to store all sdk mutations and get/list/watch request metadata for verbose log and debug, each log has unique id(operation execution ID, or default UUID when each time this process starts), and store all operation execution history, can link to all SDK run log, and link to operation info
 - Each page can mock and run separately, and use dynamic component to register and mount it, this is key to allow Extension mechanism, any one can use shadcn-vue and wrapped "K" sdk to develop KSight extension, make sure the whole project is extensible, also the command+T palette should be extensible and publish to npm registry, think how VSCode/Raycast extension works. For example Security could be a extension, detect all outdated images and dangerous k8s permissions, configs etc. All data layer functions are run in frontend using 'with + Proxy' sandbox, UI components are limited to main project existing components and auto imported to dynamic injected components
-- Pages be condense, like IDE style, don't write too many repeated tailwind classes, think abstraction and componentization
+- Pages be condense, like IDE style, don't write too many repeated tailwind classes, think abstraction and componentization. don't write svg in code, use lucide icons if possible, if have to use svg, move it to components/icon folder
+- Vue/Vue use already auto-import, don't write import statements, if other common module discovered, add to auto-imports and don't write lots of repeated import statements
 
 # Other Requirements
 
 - Don't write too many codes at once, do one small thing at a time, ask me to review and continue
-- Be concise and clear, don't reinvent wheels, no redundant codes and comments, think logic abstraction, don't repeat, like pro.
+- Be concise and clear, modern and beautiful, don't reinvent wheels, no redundant codes and comments, don't add CSS in vue component if tailwind can do it, think logic and styling and component abstraction, don't repeat.

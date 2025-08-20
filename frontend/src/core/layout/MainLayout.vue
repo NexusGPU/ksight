@@ -1,5 +1,8 @@
 <template>
   <div class="h-screen flex flex-col bg-background">
+    <!-- Custom Title Bar -->
+    <TitleBar />
+    
     <!-- Top: Cluster Tabs -->
     <ClusterTabs />
     
@@ -22,6 +25,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
+import TitleBar from './TitleBar.vue'
 import ClusterTabs from './ClusterTabs.vue'
 import Sidebar from './Sidebar.vue'
 import ChatPanel from './ChatPanel.vue'

@@ -33,9 +33,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/plugins/templates/TemplatesView.vue')
   },
   {
-    path: '/plugins/workflows',
-    name: 'workflows',
-    component: () => import('@/plugins/workflows/WorkflowsView.vue')
+    path: '/plugins/boards',
+    name: 'boards',
+    component: () => import('@/plugins/boards/BoardsView.vue')
   }
 ]
 

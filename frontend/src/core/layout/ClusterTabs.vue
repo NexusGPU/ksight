@@ -11,22 +11,22 @@
         <div class="w-2 h-2 rounded-full bg-green-500"></div>
         {{ tab.name }}
         <Button v-if="tab.pinned" variant="ghost" size="icon" class="h-4 w-4">
-          <Pin class="w-3 h-3" " />
+          <Pin class="w-3 h-3" />
         </Button>
         <Button variant="ghost" size="icon" class="h-4 w-4">
-          <X class="w-3 h-3" " />
+          <X class="w-3 h-3" />
         </Button>
       </div>
       
       <!-- Add Cluster Button -->
       <Button variant="ghost" size="icon" class="h-6 w-6">
-        <Plus class="w-4 h-4" " />
+        <Plus class="w-4 h-4" />
       </Button>
     </div>
     
     <!-- Settings -->
     <Button variant="ghost" size="icon" class="h-6 w-6">
-      <Settings class="w-4 h-4" " />
+      <Settings class="w-4 h-4" />
     </Button>
   </div>
 </template>

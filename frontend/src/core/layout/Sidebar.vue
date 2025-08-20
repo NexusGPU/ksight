@@ -43,7 +43,7 @@ const sidebarItems = ref<SidebarItem[]>([
   { id: 'nodes', title: 'Nodes', icon: 'server', order: 3, pluginId: 'nodes' },
   { id: 'resources', title: 'Resources', icon: 'box', order: 4, pluginId: 'resources' },
   { id: 'templates', title: 'Templates', icon: 'file-text', order: 5, pluginId: 'templates' },
-  { id: 'workflows', title: 'Workflows', icon: 'play-circle', order: 6, pluginId: 'workflows' }
+  { id: 'boards', title: 'Custom Boards', icon: 'chart', order: 6, pluginId: 'boards' }
 ])
 
 const openCommandPalette = () => {
