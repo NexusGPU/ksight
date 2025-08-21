@@ -93,4 +93,16 @@
         "jsonc",
         "yaml"
     ],
+    "cSpell.words": [
+        "apimachinery",
+        "appsv",
+        "Clientset",
+        "corev",
+        "envtest",
+        "gomega",
+        "ksight",
+        "Kubeconfig",
+        "metav",
+        "onsi"
+    ],
 }

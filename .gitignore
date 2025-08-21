@@ -10,3 +10,7 @@ frontend/src/components.d.ts
 package.json.md5
 
 .DS_Store
+
+test-results
+
+bin
