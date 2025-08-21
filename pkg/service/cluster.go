@@ -5,17 +5,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"ksight/pkg/informer"
 
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // EventEmitter interface for abstracting event emission
 type EventEmitter interface {
-	Emit(event string, data interface{})
+	Emit(event string, data any)
 }
 
 // WailsEventEmitter implements EventEmitter using Wails runtime
@@ -23,14 +24,14 @@ type WailsEventEmitter struct {
 	ctx context.Context
 }
 
-func (w *WailsEventEmitter) Emit(event string, data interface{}) {
+func (w *WailsEventEmitter) Emit(event string, data any) {
 	runtime.EventsEmit(w.ctx, event, data)
 }
 
 // MockEventEmitter implements EventEmitter for testing
 type MockEventEmitter struct{}
 
-func (m *MockEventEmitter) Emit(event string, data interface{}) {
+func (m *MockEventEmitter) Emit(event string, data any) {
 	// Mock implementation - could log or store events for testing
 }
 
@@ -54,22 +55,22 @@ type ClusterService struct {
 
 // ClusterInfo represents cluster information for frontend
 type ClusterInfo struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Context     string `json:"context"`
-	Server      string `json:"server"`
-	Status      string `json:"status"`
-	LastError   string `json:"lastError,omitempty"`
-	IsPinned    bool   `json:"isPinned"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Context   string `json:"context"`
+	Server    string `json:"server"`
+	Status    string `json:"status"`
+	LastError string `json:"lastError,omitempty"`
+	IsPinned  bool   `json:"isPinned"`
 }
 
 // ResourceWatchRequest represents a request to watch resources
 type ResourceWatchRequest struct {
-	ClusterID   string `json:"clusterId"`
-	Group       string `json:"group"`
-	Version     string `json:"version"`
-	Resource    string `json:"resource"`
-	Namespace   string `json:"namespace,omitempty"`
+	ClusterID string `json:"clusterId"`
+	Group     string `json:"group"`
+	Version   string `json:"version"`
+	Resource  string `json:"resource"`
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // NewClusterService creates a new cluster service
@@ -87,7 +88,7 @@ func NewClusterService(ctx context.Context) *ClusterService {
 
 	// Create informer manager with event handler
 	manager := informer.NewInformerManager(
-		filepath.Join(dataDir, "resource_versions.json"),
+		filepath.Join(dataDir, "last_watch_resource_versions.json"),
 		func(event informer.Event) {
 			// Emit event to frontend
 			cs.eventEmitter.Emit("resource:event", event)
@@ -102,7 +103,7 @@ func NewClusterService(ctx context.Context) *ClusterService {
 func (cs *ClusterService) AddCluster(name, kubeconfig, context string) (string, error) {
 	// Generate cluster ID
 	clusterID := fmt.Sprintf("cluster_%d", len(cs.informerManager.GetClusters())+1)
-	
+
 	err := cs.informerManager.AddCluster(clusterID, name, kubeconfig, context)
 	if err != nil {
 		return "", err
@@ -238,7 +239,7 @@ func (cs *ClusterService) SaveKubeconfigToFile(content, fileName string) (string
 // GetKubeconfigFiles returns list of saved kubeconfig files
 func (cs *ClusterService) GetKubeconfigFiles() ([]string, error) {
 	kubeconfigDir := filepath.Join(cs.dataDir, "kubeconfigs")
-	
+
 	entries, err := os.ReadDir(kubeconfigDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -280,7 +281,7 @@ func (cs *ClusterService) GetResourceTypes(clusterID string) ([]schema.GroupVers
 	if err != nil {
 		return nil, fmt.Errorf("failed to create discovery client: %w", err)
 	}
-	
+
 	resourceLists, err := discoveryClient.ServerPreferredResources()
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover resources: %w", err)
@@ -304,6 +305,76 @@ func (cs *ClusterService) GetResourceTypes(clusterID string) ([]schema.GroupVers
 	}
 
 	return gvrs, nil
+}
+
+// GetResourceWithSensitivity retrieves a resource, handling sensitive data appropriately
+func (cs *ClusterService) GetResourceWithSensitivity(clusterID string, group, version, resource, namespace, name string, showSensitive bool) (map[string]any, error) {
+	gvr := schema.GroupVersionResource{
+		Group:    group,
+		Version:  version,
+		Resource: resource,
+	}
+
+	if showSensitive {
+		// Get original resource from API server
+		original, err := cs.informerManager.GetOriginalResource(clusterID, gvr, namespace, name)
+		if err != nil {
+			return nil, err
+		}
+		return original.Object, nil
+	} else {
+		// Get potentially redacted resource from cache
+		resource, isSensitive, err := cs.informerManager.GetResourceWithSensitivityInfo(clusterID, gvr, namespace, name)
+		if err != nil {
+			return nil, err
+		}
+
+		result := resource.Object
+		if result == nil {
+			result = make(map[string]any)
+		}
+
+		// Add metadata about sensitivity
+		result["_sensitive"] = isSensitive
+
+		return result, nil
+	}
+}
+
+// GetCacheStats returns statistics about the resource cache
+func (cs *ClusterService) GetCacheStats() (map[string]int, error) {
+	stats, err := cs.informerManager.GetCacheStats()
+	if err != nil {
+		return map[string]int{"available": 0}, nil
+	}
+	return stats, nil
+}
+
+// CleanOldCache removes old cache entries
+func (cs *ClusterService) CleanOldCache(maxAgeHours int) error {
+	maxAge := time.Duration(maxAgeHours) * time.Hour
+	return cs.informerManager.CleanOldCache(maxAge)
+}
+
+// LoadInitialData loads cached data for faster startup
+func (cs *ClusterService) LoadInitialData(clusterID string, group, version, resource string) ([]map[string]any, string, error) {
+	gvr := schema.GroupVersionResource{
+		Group:    group,
+		Version:  version,
+		Resource: resource,
+	}
+
+	resources, resourceVersion, err := cs.informerManager.LoadInitialData(clusterID, gvr)
+	if err != nil {
+		return nil, "", err
+	}
+
+	var result []map[string]any
+	for _, res := range resources {
+		result = append(result, res.Object)
+	}
+
+	return result, resourceVersion, nil
 }
 
 // Shutdown gracefully shuts down the service

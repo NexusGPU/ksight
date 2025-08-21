@@ -96,8 +96,10 @@
     "cSpell.words": [
         "apimachinery",
         "appsv",
+        "clientcmd",
         "Clientset",
         "corev",
+        "dynamicinformer",
         "envtest",
         "gomega",
         "ksight",

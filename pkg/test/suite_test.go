@@ -197,7 +197,13 @@ func waitForResource(obj client.Object, timeout time.Duration) {
 }
 
 func deleteResource(obj client.Object) {
-	Expect(k8sClient.Delete(ctx, obj)).To(Succeed())
+	// Delete the resource
+	err := k8sClient.Delete(ctx, obj)
+	if client.IgnoreNotFound(err) != nil {
+		Expect(err).NotTo(HaveOccurred())
+	}
+	
+	// Wait for the resource to be fully deleted
 	Eventually(func() bool {
 		err := k8sClient.Get(ctx, client.ObjectKeyFromObject(obj), obj)
 		return client.IgnoreNotFound(err) == nil

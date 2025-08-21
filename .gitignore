@@ -12,5 +12,6 @@ package.json.md5
 .DS_Store
 
 test-results
-
+test.test
+benchmark-results
 bin

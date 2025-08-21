@@ -1,8 +1,10 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -20,10 +22,12 @@ var _ = Describe("ResourceVersion Persistence", func() {
 		manager2      *informer.InformerManager
 		events1       []informer.Event
 		events2       []informer.Event
+		events1Mutex  sync.RWMutex
+		events2Mutex  sync.RWMutex
 	)
 
 	BeforeEach(func() {
-		testStorePath = filepath.Join(tempDir, "persistence_test.json")
+		testStorePath = filepath.Join(tempDir, fmt.Sprintf("persistence_test_%d.json", GinkgoRandomSeed()))
 		testClusterID = "persistence-test-cluster"
 		events1 = []informer.Event{}
 		events2 = []informer.Event{}
@@ -32,25 +36,34 @@ var _ = Describe("ResourceVersion Persistence", func() {
 		manager1 = informer.NewInformerManager(
 			testStorePath,
 			func(event informer.Event) {
+				events1Mutex.Lock()
 				events1 = append(events1, event)
+				events1Mutex.Unlock()
 			},
 		)
 	})
 
 	AfterEach(func() {
 		if manager1 != nil {
+			manager1.CleanupTestData()
 			manager1.Shutdown()
 		}
 		if manager2 != nil {
+			manager2.CleanupTestData()
 			manager2.Shutdown()
 		}
-		os.Remove(testStorePath)
+		// Clean up test storage path and cache directory
+		if testStorePath != "" {
+			os.Remove(testStorePath)
+			cacheDir := filepath.Join(filepath.Dir(testStorePath), "cache")
+			os.RemoveAll(cacheDir)
+		}
 	})
 
 	Context("ResourceVersion Storage", func() {
 		It("should persist resource versions to disk", func() {
 			kubeconfigPath := writeKubeconfigToTempFile()
-			
+
 			// Add cluster and watcher
 			err := manager1.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
 			Expect(err).NotTo(HaveOccurred())
@@ -72,6 +85,8 @@ var _ = Describe("ResourceVersion Persistence", func() {
 
 			// Wait for events
 			Eventually(func() int {
+				events1Mutex.RLock()
+				defer events1Mutex.RUnlock()
 				return len(events1)
 			}, 10*time.Second, time.Second).Should(BeNumerically(">", 0))
 
@@ -86,7 +101,9 @@ var _ = Describe("ResourceVersion Persistence", func() {
 			manager2 = informer.NewInformerManager(
 				testStorePath,
 				func(event informer.Event) {
+					events2Mutex.Lock()
 					events2 = append(events2, event)
+					events2Mutex.Unlock()
 				},
 			)
 
@@ -106,13 +123,15 @@ var _ = Describe("ResourceVersion Persistence", func() {
 
 			// Should receive events from second manager
 			Eventually(func() int {
+				events2Mutex.RLock()
+				defer events2Mutex.RUnlock()
 				return len(events2)
 			}, 10*time.Second, time.Second).Should(BeNumerically(">", 0))
 		})
 
 		It("should handle missing storage file gracefully", func() {
 			nonExistentPath := filepath.Join(tempDir, "non-existent.json")
-			
+
 			manager := informer.NewInformerManager(
 				nonExistentPath,
 				func(event informer.Event) {},
@@ -150,7 +169,7 @@ var _ = Describe("ResourceVersion Persistence", func() {
 	Context("Cache Resumption", func() {
 		It("should resume watching from last known resource version", func() {
 			kubeconfigPath := writeKubeconfigToTempFile()
-			
+
 			// First manager session
 			err := manager1.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
 			Expect(err).NotTo(HaveOccurred())
@@ -173,16 +192,20 @@ var _ = Describe("ResourceVersion Persistence", func() {
 
 			// Wait for events
 			Eventually(func() int {
+				events1Mutex.RLock()
+				defer events1Mutex.RUnlock()
 				return len(events1)
 			}, 10*time.Second, time.Second).Should(BeNumerically(">", 0))
 
 			// Get the last resource version from events
 			var lastResourceVersion string
+			events1Mutex.RLock()
 			for _, event := range events1 {
 				if event.Object != nil && event.Object.GetResourceVersion() != "" {
 					lastResourceVersion = event.Object.GetResourceVersion()
 				}
 			}
+			events1Mutex.RUnlock()
 
 			// Shutdown first manager
 			manager1.Shutdown()
@@ -192,7 +215,9 @@ var _ = Describe("ResourceVersion Persistence", func() {
 			manager2 = informer.NewInformerManager(
 				testStorePath,
 				func(event informer.Event) {
+					events2Mutex.Lock()
 					events2 = append(events2, event)
+					events2Mutex.Unlock()
 				},
 			)
 
@@ -212,6 +237,8 @@ var _ = Describe("ResourceVersion Persistence", func() {
 
 			// Should receive events for new pod
 			Eventually(func() int {
+				events2Mutex.RLock()
+				defer events2Mutex.RUnlock()
 				return len(events2)
 			}, 10*time.Second, time.Second).Should(BeNumerically(">", 0))
 
@@ -223,7 +250,7 @@ var _ = Describe("ResourceVersion Persistence", func() {
 	Context("Multiple Clusters and Resources", func() {
 		It("should persist resource versions for multiple clusters", func() {
 			kubeconfigPath := writeKubeconfigToTempFile()
-			
+
 			cluster1ID := "cluster-1"
 			cluster2ID := "cluster-2"
 
@@ -258,6 +285,8 @@ var _ = Describe("ResourceVersion Persistence", func() {
 
 			// Wait for events
 			Eventually(func() int {
+				events1Mutex.RLock()
+				defer events1Mutex.RUnlock()
 				return len(events1)
 			}, 10*time.Second, time.Second).Should(BeNumerically(">", 0))
 
@@ -268,7 +297,9 @@ var _ = Describe("ResourceVersion Persistence", func() {
 			manager2 = informer.NewInformerManager(
 				testStorePath,
 				func(event informer.Event) {
+					events2Mutex.Lock()
 					events2 = append(events2, event)
+					events2Mutex.Unlock()
 				},
 			)
 

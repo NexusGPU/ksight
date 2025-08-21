@@ -1,6 +1,7 @@
 package test
 
 import (
+	"fmt"
 	"path/filepath"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ var _ = Describe("InformerManager", func() {
 		eventChan     chan informer.Event
 		eventMutex    sync.RWMutex
 		receivedEvents []informer.Event
+		testInformerManager *informer.InformerManager
 	)
 
 	BeforeEach(func() {
@@ -25,9 +27,9 @@ var _ = Describe("InformerManager", func() {
 		eventChan = make(chan informer.Event, 100)
 		receivedEvents = []informer.Event{}
 
-		// Create new informer manager with event capture
-		informerManager = informer.NewInformerManager(
-			filepath.Join(tempDir, "test_resource_versions.json"),
+		// Create new informer manager with event capture for this test
+		testInformerManager = informer.NewInformerManager(
+			filepath.Join(tempDir, fmt.Sprintf("test_resource_versions_%d.json", GinkgoRandomSeed())),
 			func(event informer.Event) {
 				eventMutex.Lock()
 				receivedEvents = append(receivedEvents, event)
@@ -41,8 +43,9 @@ var _ = Describe("InformerManager", func() {
 	})
 
 	AfterEach(func() {
-		if informerManager != nil {
-			informerManager.Shutdown()
+		if testInformerManager != nil {
+			testInformerManager.CleanupTestData()
+			testInformerManager.Shutdown()
 		}
 		close(eventChan)
 	})
@@ -51,10 +54,10 @@ var _ = Describe("InformerManager", func() {
 		It("should add a cluster successfully", func() {
 			kubeconfigPath := writeKubeconfigToTempFile()
 			
-			err := informerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
+			err := testInformerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
 			Expect(err).NotTo(HaveOccurred())
 
-			clusters := informerManager.GetClusters()
+			clusters := testInformerManager.GetClusters()
 			Expect(clusters).To(HaveKey(testClusterID))
 			Expect(clusters[testClusterID].Name).To(Equal("test-cluster"))
 			Expect(clusters[testClusterID].Status).To(Equal("connected"))
@@ -63,18 +66,18 @@ var _ = Describe("InformerManager", func() {
 		It("should remove a cluster successfully", func() {
 			kubeconfigPath := writeKubeconfigToTempFile()
 			
-			err := informerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
+			err := testInformerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
 			Expect(err).NotTo(HaveOccurred())
 
-			err = informerManager.RemoveCluster(testClusterID)
+			err = testInformerManager.RemoveCluster(testClusterID)
 			Expect(err).NotTo(HaveOccurred())
 
-			clusters := informerManager.GetClusters()
+			clusters := testInformerManager.GetClusters()
 			Expect(clusters).NotTo(HaveKey(testClusterID))
 		})
 
 		It("should return error when removing non-existent cluster", func() {
-			err := informerManager.RemoveCluster("non-existent")
+			err := testInformerManager.RemoveCluster("non-existent")
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("not found"))
 		})
@@ -83,7 +86,7 @@ var _ = Describe("InformerManager", func() {
 	Context("Resource Watchers", func() {
 		BeforeEach(func() {
 			kubeconfigPath := writeKubeconfigToTempFile()
-			err := informerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
+			err := testInformerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -100,7 +103,7 @@ var _ = Describe("InformerManager", func() {
 				Resource: "pods",
 			}
 			
-			err := informerManager.AddResourceWatcher(testClusterID, podGVR, "")
+			err := testInformerManager.AddResourceWatcher(testClusterID, podGVR, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			// Wait for informer to sync
@@ -143,7 +146,7 @@ var _ = Describe("InformerManager", func() {
 				Resource: "deployments",
 			}
 			
-			err := informerManager.AddResourceWatcher(testClusterID, deploymentGVR, "")
+			err := testInformerManager.AddResourceWatcher(testClusterID, deploymentGVR, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			// Wait for informer to sync
@@ -174,10 +177,10 @@ var _ = Describe("InformerManager", func() {
 				Resource: "pods",
 			}
 			
-			err := informerManager.AddResourceWatcher(testClusterID, podGVR, "")
+			err := testInformerManager.AddResourceWatcher(testClusterID, podGVR, "")
 			Expect(err).NotTo(HaveOccurred())
 
-			err = informerManager.RemoveResourceWatcher(testClusterID, podGVR)
+			err = testInformerManager.RemoveResourceWatcher(testClusterID, podGVR)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -185,14 +188,14 @@ var _ = Describe("InformerManager", func() {
 			podGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
 			serviceGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "services"}
 			
-			err := informerManager.AddResourceWatcher(testClusterID, podGVR, "")
+			err := testInformerManager.AddResourceWatcher(testClusterID, podGVR, "")
 			Expect(err).NotTo(HaveOccurred())
 			
-			err = informerManager.AddResourceWatcher(testClusterID, serviceGVR, "")
+			err = testInformerManager.AddResourceWatcher(testClusterID, serviceGVR, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			// Verify both watchers are active
-			clusters := informerManager.GetClusters()
+			clusters := testInformerManager.GetClusters()
 			cluster := clusters[testClusterID]
 			Expect(len(cluster.Informers)).To(Equal(2))
 		})
@@ -201,7 +204,7 @@ var _ = Describe("InformerManager", func() {
 	Context("Resource Version Persistence", func() {
 		It("should persist and restore resource versions", func() {
 			kubeconfigPath := writeKubeconfigToTempFile()
-			err := informerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
+			err := testInformerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
 			Expect(err).NotTo(HaveOccurred())
 
 			// Create test namespace and pod
@@ -210,7 +213,7 @@ var _ = Describe("InformerManager", func() {
 			defer deleteResource(testNS)
 
 			podGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
-			err = informerManager.AddResourceWatcher(testClusterID, podGVR, "")
+			err = testInformerManager.AddResourceWatcher(testClusterID, podGVR, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			// Wait for sync and create pod to generate events
@@ -227,7 +230,7 @@ var _ = Describe("InformerManager", func() {
 			}, 10*time.Second, time.Second).Should(BeNumerically(">", 0))
 
 			// Shutdown and recreate informer manager
-			informerManager.Shutdown()
+			testInformerManager.Shutdown()
 			
 			// Create new manager with same storage path
 			newManager := informer.NewInformerManager(
@@ -245,7 +248,7 @@ var _ = Describe("InformerManager", func() {
 	Context("Event Handling", func() {
 		BeforeEach(func() {
 			kubeconfigPath := writeKubeconfigToTempFile()
-			err := informerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
+			err := testInformerManager.AddCluster(testClusterID, "test-cluster", kubeconfigPath, "test-context")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -255,7 +258,7 @@ var _ = Describe("InformerManager", func() {
 			defer deleteResource(testNS)
 
 			podGVR := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
-			err := informerManager.AddResourceWatcher(testClusterID, podGVR, "")
+			err := testInformerManager.AddResourceWatcher(testClusterID, podGVR, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			time.Sleep(2 * time.Second)
